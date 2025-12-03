@@ -27,25 +27,32 @@ class UpdateTutorProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:2', 'max:255'],
-            'gender' => ['required', new Enum(GenderEnum::class)],
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'gender' => ['sometimes', new Enum(GenderEnum::class)],
             'date_of_birth' => [
-                'required', 
+                'sometimes', 
                 'date', 
                 'date_format:Y-m-d', 
                 'before_or_equal:today'
             ],
-            'religion' => ['required', new Enum(ReligionEnum::class)],
-            'telephone_number' => ['required','string','max:15'],
+            'religion' => ['sometimes', new Enum(ReligionEnum::class)],
+            'telephone_number' => ['sometimes','string','max:15'],
             
-            'province' => ['required', 'string', 'min:2', 'max:255'],
-            'regency' => ['required', 'string', 'min:2', 'max:255'],
-            'district' => ['required', 'string', 'min:2', 'max:255'],
-            'subdistrict' => ['required', 'string', 'min:2', 'max:255'],
-            'street' => ['required', 'string', 'min:2', 'max:255'],
+            'province' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'regency' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'district' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'subdistrict' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'street' => ['sometimes', 'string', 'min:2', 'max:255'],
 
             'bank' => ['nullable', 'string'],
             'rekening' => ['nullable', 'string'],
+            
+            // Fields dari social auth profile update
+            'description' => ['sometimes', 'string'],
+            'keahlian' => ['sometimes', 'string'],
+            'skills' => ['sometimes', 'array'],
+            'schedule' => ['sometimes', 'array'],
+            'education' => ['sometimes', 'array'],
         ];
     }
 }

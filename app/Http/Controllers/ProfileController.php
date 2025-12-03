@@ -88,6 +88,8 @@ class ProfileController extends Controller
 
         $user = $request->user()->load(['tutor']);
         $tutor = $user->tutor;
+        
+        // Data user (fields yang ada di tabel users)
         $userData = $request->only([
             'name', 
             'gender', 
@@ -98,6 +100,7 @@ class ProfileController extends Controller
             'longitude',
         ]);
         
+        // Alamat
         $rawAddress = $request->only([
             'province',
             'regency',
@@ -106,25 +109,82 @@ class ProfileController extends Controller
             'street',
         ]);
         
+        // Data tutor (fields yang ada di tabel tutors)
         $tutorData = $request->only([
             'bank',
             'rekening',
+            'description',
+            'keahlian',
         ]);
 
+        // Handle name edit dengan validasi 7 hari (untuk social auth)
+        if ($request->has('name') && !empty($userData['name'])) {
+            $lastNameEdit = $user->last_name_edit;
+            
+            if ($lastNameEdit) {
+                $daysSinceLastEdit = now()->diffInDays($lastNameEdit);
+                
+                if ($daysSinceLastEdit < 7) {
+                    $nextEditDate = \Carbon\Carbon::parse($lastNameEdit)->addDays(7)->format('d F Y');
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Nama hanya dapat diubah sekali dalam 7 hari. Anda dapat mengubah nama kembali pada {$nextEditDate}",
+                        'can_edit_at' => $nextEditDate,
+                        'days_remaining' => 7 - $daysSinceLastEdit
+                    ], 422);
+                }
+            }
+            
+            $userData['last_name_edit'] = now();
+        }
+
+        // Handle skills array (untuk social auth)
+        if ($request->has('skills') && is_array($request->input('skills'))) {
+            $skills = $request->input('skills');
+            if (!empty($skills)) {
+                $tutorData['keahlian'] = $skills[0];
+            }
+        }
+
+        // Handle schedule array (untuk social auth)
+        if ($request->has('schedule')) {
+            $tutorData['learning_method'] = json_encode($request->input('schedule'));
+        }
+
+        // Handle education array (untuk social auth)
+        if ($request->has('education')) {
+            $tutorData['education'] = $request->input('education');
+        }
+
         $userService = new UserService;
-        $address = $userService->convertAddressToArray($rawAddress);
-        $userData = array_merge($userData, $address);
+        
+        if (!empty($rawAddress)) {
+            $address = $userService->convertAddressToArray($rawAddress);
+            $userData = array_merge($userData, $address);
+        }
         
         DB::beginTransaction();
         try{
-            $user->update($userData);
-            $tutor->update($tutorData);
+            // Update user data jika ada
+            if (!empty($userData)) {
+                $user->update($userData);
+            }
+            
+            // Update tutor data jika ada
+            if (!empty($tutorData)) {
+                $tutor->update($tutorData);
+            }
             
             DB::commit();
 
+            // Reload user dengan relasi
+            $user->load('tutor');
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Profile berhasil di update',
+                'message' => 'Profil berhasil diperbarui',
+                'user' => $user,
+                'tutor' => $tutor
             ], 200);
         } catch(Exception $e) {
             
@@ -132,7 +192,7 @@ class ProfileController extends Controller
             
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal mengupdate profile' . $e->getMessage(),
+                'message' => 'Gagal mengupdate profil: ' . $e->getMessage(),
                 'error_code' => $e->getCode()
             ], 500);
         }

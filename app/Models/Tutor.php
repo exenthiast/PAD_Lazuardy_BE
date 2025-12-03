@@ -34,6 +34,14 @@ class Tutor extends Model
         'status',
         'badge',
         'sanction_amount',
+        'keahlian',
+        'market_siswa',
+        'pengalaman',
+        'skil_bahasa',
+        'organisasi',
+        'cv_path',
+        'ktp_path',
+        'ijazah_path',
     ];
     
     protected $casts = [

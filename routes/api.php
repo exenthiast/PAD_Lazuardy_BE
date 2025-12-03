@@ -32,6 +32,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/me', [LoginController::class, 'me']);
     
+    // Social Auth - Set Role
+    Route::post('/auth/social/set-role', [SocialAuthController::class, 'setRole']);
+    
+    // Tutor - Complete Profile (untuk social login)
+    Route::post('/tutor/complete-profile', [SocialAuthController::class, 'completeTutorProfile']);
+    
+    // Tutor - Upload Photo
+    Route::post('/tutor/upload-photo', [SocialAuthController::class, 'uploadPhoto']);
+    
     // Dashboard Student
     Route::get('/dashboard/student', [StudentDashboardController::class, 'index']);
     Route::get('/dashboard/student/summary', [StudentDashboardController::class, 'summary']);

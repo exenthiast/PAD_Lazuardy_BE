@@ -39,6 +39,7 @@ class User extends Authenticatable
         'latitude',
         'longitude',
         'platform',
+        'last_name_edit',
     ];
 
     /**

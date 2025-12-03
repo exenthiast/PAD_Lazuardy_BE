@@ -52,8 +52,11 @@ class LoginController extends Controller
 
     public function me(Request $request)
     {
+        // Load relasi tutor untuk mendapatkan data lengkap
+        $user = $request->user()->load('tutor');
+        
         return response()->json([
-            'user' => $request->user()
+            'user' => $user
         ]);
     }
 }
