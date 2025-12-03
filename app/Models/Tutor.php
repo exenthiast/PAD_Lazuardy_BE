@@ -62,4 +62,5 @@ class Tutor extends Model
     {
         return $this->belongsToMany(Subject::class, 'tutor_subjects', 'user_id', 'subject_id');
     }
+    
 }
