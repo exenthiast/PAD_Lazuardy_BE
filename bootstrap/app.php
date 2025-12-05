@@ -17,6 +17,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRoleMiddleware::class,
         ]);
+        
+        // Enable CORS for all API routes
+        $middleware->group('api', [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+        
+        // Also apply HandleCors globally for preflight requests
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+        
+        // Redirect guests to null for API routes (prevent redirect to login route)
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('api/*')) {
+                return null;
+            }
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $e, $request) {

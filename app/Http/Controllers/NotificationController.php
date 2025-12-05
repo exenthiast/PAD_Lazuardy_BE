@@ -22,20 +22,25 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // Transform notifications to include only needed fields
+        $transformedData = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->data['title'] ?? 'Notification',
+                'body' => $notification->data['body'] ?? '',
+                'read_at' => $notification->read_at,
+                'created_at' => $notification->created_at,
+            ];
+        });
+
+        // Return Laravel pagination format
         return response()->json([
-            'success' => true,
-            'message' => 'Notifications retrieved successfully',
-            'data' => [
-                'notifications' => $notifications->items(),
-                'pagination' => [
-                    'current_page' => $notifications->currentPage(),
-                    'per_page' => $notifications->perPage(),
-                    'total' => $notifications->total(),
-                    'last_page' => $notifications->lastPage(),
-                    'from' => $notifications->firstItem(),
-                    'to' => $notifications->lastItem(),
-                ]
-            ]
+            'data' => $transformedData,
+            'current_page' => $notifications->currentPage(),
+            'last_page' => $notifications->lastPage(),
+            'per_page' => $notifications->perPage(),
+            'total' => $notifications->total(),
         ], 200);
     }
 
@@ -52,11 +57,7 @@ class NotificationController extends Controller
         $count = $user->unreadNotifications()->count();
 
         return response()->json([
-            'success' => true,
-            'message' => 'Unread notifications count retrieved successfully',
-            'data' => [
-                'unread_count' => $count
-            ]
+            'unread_count' => $count
         ], 200);
     }
 

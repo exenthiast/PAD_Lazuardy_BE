@@ -69,10 +69,14 @@ class LoginController extends Controller
         // Buat token baru
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Convert role enum to string for frontend
+        $userData = $user->toArray();
+        $userData['role'] = $user->role?->value ?? 'undefined';
+
         return response()->json([
             'message' => 'Login berhasil',
             'token' => $token,
-            'user' => $user,
+            'user' => $userData,
         ]);
     }
 
@@ -132,8 +136,12 @@ class LoginController extends Controller
         // Load relasi tutor untuk mendapatkan data lengkap
         $user = $request->user()->load('tutor');
         
+        // Convert role enum to string for frontend
+        $userData = $user->toArray();
+        $userData['role'] = $user->role?->value ?? 'undefined';
+        
         return response()->json([
-            'user' => $user
+            'user' => $userData
         ]);
     }
 }

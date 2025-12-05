@@ -19,7 +19,7 @@ class Payment extends Model
         'order_id',
         'amount',
         'proof_image_url',
-        'date',
+        'paid_at',
         'payment_method',
         'status',
     ];
@@ -32,13 +32,24 @@ class Payment extends Model
         ];
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function order(): BelongsTo 
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Get the user who made this payment through the order
+     */
+    public function getUserAttribute()
+    {
+        return $this->order ? $this->order->user : null;
+    }
+
+    /**
+     * Get the package for this payment through the order
+     */
+    public function getPackageAttribute()
+    {
+        return $this->order ? $this->order->package : null;
     }
 }

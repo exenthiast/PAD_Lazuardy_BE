@@ -25,25 +25,29 @@ class UpdateStudentProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:2', 'max:255'],
-            'telephone_number' => ['required','string','max:15'],
-            'profile_photo_url' => ['required', 'string'],
-            'gender' => ['required', new Enum(GenderEnum::class)],
+            'name' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'telephone_number' => ['sometimes','string','max:15'],
+            'profile_photo_url' => ['sometimes', 'string'],
+            'photo' => ['sometimes', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // Upload foto
+            'gender' => ['sometimes', new Enum(GenderEnum::class)],
             'date_of_birth' => [
-                'required', 
+                'sometimes', 
                 'date', 
                 'date_format:Y-m-d', 
                 'before_or_equal:today'
             ],
-            'religion' => ['required', new Enum(ReligionEnum::class)],
+            'religion' => ['sometimes', new Enum(ReligionEnum::class)],
             
-            'province' => ['required', 'string', 'min:2', 'max:255'],
-            'regency' => ['required', 'string', 'min:2', 'max:255'],
-            'district' => ['required', 'string', 'min:2', 'max:255'],
-            'subdistrict' => ['required', 'string', 'min:2', 'max:255'],
-            'street' => ['required', 'string', 'min:2', 'max:255'],
+            'province' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'regency' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'district' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'subdistrict' => ['sometimes', 'string', 'min:2', 'max:255'],
+            'street' => ['sometimes', 'string', 'min:2', 'max:255'],
             
-            'school' =>  ['required', 'string', 'min:2', 'max:255'],
+            'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
+            
+            'school' =>  ['sometimes', 'string', 'min:2', 'max:255'],
             'class_id' =>  ['nullable', 'integer', 'exists:classes,id'],
             'curriculum_id' =>  ['nullable', 'integer', 'exists:curriculums,id'],
             'parent' => ['nullable', 'string', 'min:2', 'max:255'],

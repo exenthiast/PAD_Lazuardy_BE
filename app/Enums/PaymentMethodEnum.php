@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum PaymentMethodEnum: string
 {
+    case BANK_BCA = 'bca';
     case BANK_MANDIRI = 'mandiri';
     case BANK_BNI = 'bni';
     case BANK_BRI = 'bri';
@@ -15,12 +16,13 @@ enum PaymentMethodEnum: string
     {
         return match($this) 
         {
-            self::BANK_MANDIRI => 'mandiri',
-            self::BANK_BNI => 'bni',
-            self::BANK_BRI => 'bri',
-            self::BANK_BPR => 'bpr',
-            self::BANK_BPD => 'bpd',
-            self::BANK_QRIS => 'qris',
+            self::BANK_BCA => 'BCA',
+            self::BANK_MANDIRI => 'Mandiri',
+            self::BANK_BNI => 'BNI',
+            self::BANK_BRI => 'BRI',
+            self::BANK_BPR => 'BPR',
+            self::BANK_BPD => 'BPD',
+            self::BANK_QRIS => 'QRIS',
         };
     }
 

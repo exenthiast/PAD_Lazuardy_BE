@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\TakenScheduleStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TakenSchedule extends Model
 {
@@ -19,6 +20,10 @@ class TakenSchedule extends Model
         'subject_id',
         'date',
         'status',
+        'meeting_link',
+        'course_mode',
+        'meeting_link_sent',
+        'meeting_link_sent_at',
     ];
 
     protected function casts(): array
@@ -26,6 +31,8 @@ class TakenSchedule extends Model
         return [
             'status' => TakenScheduleStatusEnum::class,
             'date' => 'date',
+            'meeting_link_sent' => 'boolean',
+            'meeting_link_sent_at' => 'datetime',
         ];
     }
 
@@ -42,5 +49,10 @@ class TakenSchedule extends Model
     public function subject()
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function studentAttendance(): HasOne
+    {
+        return $this->hasOne(StudentAttendance::class);
     }
 }

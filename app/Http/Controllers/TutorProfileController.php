@@ -107,7 +107,7 @@ class TutorProfileController extends Controller
                 // HEADER INFO
                 'user_id' => $tutor->id,
                 'name' => $tutor->name,
-                'profile_photo_url' => $tutor->profile_photo_url,
+                'profile_photo_url' => $tutor->profile_photo_url ? url('storage/' . $tutor->profile_photo_url) : null,
                 'telephone_number' => $tutor->telephone_number,
                 'gender' => $tutor->gender,
                 
@@ -133,6 +133,9 @@ class TutorProfileController extends Controller
 
                 // MATA PELAJARAN
                 'subjects' => $subjects,
+                
+                // MARKET SISWA (target student level)
+                'market_siswa' => $tutor->tutor->market_siswa ?? null,
 
                 // KUALIFIKASI
                 'qualification' => [

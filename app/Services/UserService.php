@@ -20,14 +20,21 @@ class UserService
     
     public function convertAddressToArray($data)
     {
-        return 
-            [
-            "province" => $data["province"],
-            "regency" => $data["regency"],
-            "district" => $data["district"],
-            "subdistrict" => $data["subdistrict"],
-            "street" => $data["street"],
-            ];
+        Log::info('Converting address - Input data:', [
+            'province' => $data['province'] ?? 'NOT SET',
+            'regency' => $data['regency'] ?? 'NOT SET',
+            'district' => $data['district'] ?? 'NOT SET',
+            'subdistrict' => $data['subdistrict'] ?? 'NOT SET',
+            'street' => $data['street'] ?? 'NOT SET',
+        ]);
+        
+        return [
+            "province" => $data["province"] ?? null,
+            "regency" => $data["regency"] ?? null,
+            "district" => $data["district"] ?? null,
+            "subdistrict" => $data["subdistrict"] ?? null,
+            "street" => $data["street"] ?? null,
+        ];
     }
 
     public function convertAddressToString($data)
@@ -40,7 +47,7 @@ class UserService
 
     public function showUserProfile(User $query)
     {
-        $address = $query->home_address;
+        $address = $query->home_address ?? [];
         $data = [
             'name' => $query->name,
             'email' => $query->email,
@@ -52,11 +59,13 @@ class UserService
             'latitude' => $query->latitude,
             'longitude' => $query->longitude,
 
-            'province' => $address['province']?? null,
-            'city' => $address['regency']?? null,
-            'district' => $address['district']?? null,
-            'subdistrict' => $address['subdistrict']?? null,
-            'street' => $address['street']?? null,
+            // Address fields - kirim dengan nama yang konsisten
+            'province' => $address['province'] ?? null,
+            'regency' => $address['regency'] ?? null,
+            'city' => $address['regency'] ?? null, // Alias untuk backward compatibility
+            'district' => $address['district'] ?? null,
+            'subdistrict' => $address['subdistrict'] ?? null,
+            'street' => $address['street'] ?? null,
         ];
 
         return $data;

@@ -9,12 +9,17 @@ class ClassSeeder extends Seeder
 {
     public function run(): void
     {
-        $classes = [];
+        $classes = [
+            'Kelas 7',
+            'Kelas 8', 
+            'Kelas 9',
+            'Kelas 10',
+            'Kelas 11',
+            'Kelas 12',
+        ];
 
-        for ($i=1; $i<=6; $i++){
-            $classes[] = ['name' => 'kelas ' . $i];
+        foreach ($classes as $className) {
+            ClassModel::firstOrCreate(['name' => $className]);
         }
-
-        ClassModel::insert($classes);
     }
 }

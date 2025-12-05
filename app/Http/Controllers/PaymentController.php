@@ -124,6 +124,7 @@ class PaymentController extends Controller
             return response()->json([
                 'status' => "success",
                 'message' => 'Berhasil membuat order',
+                'order_id' => $order->id,
             ], 200);
         } catch(Exception $e) {
             DB::rollBack();
@@ -177,9 +178,9 @@ class PaymentController extends Controller
             // Simpan ke storage
             $path = $file->store("uploads", 'public');
 
-            $updatePayment = Payment::where('id', $request->order_id)
+            $updatePayment = Payment::where('order_id', $request->order_id)
                     ->where('status', '!=', PaymentStatusEnum::VALIDATED->value)
-                    ->updateOrFail([
+                    ->update([
                         'status' => PaymentStatusEnum::UPLOADED->value,
                         'proof_image_url' => $path,
                         'updated_at' => now(),
@@ -187,9 +188,9 @@ class PaymentController extends Controller
 
             if($updatePayment === 0){
                 return response()->json([
-                    'status' => 'Error',
-                    'message' => 'Gagal mengupload data file'
-                ]);
+                    'status' => 'error',
+                    'message' => 'Payment tidak ditemukan atau sudah tervalidasi'
+                ], 404);
             }
 
             return response()->json([

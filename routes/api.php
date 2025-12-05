@@ -16,14 +16,24 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\TutorDashboardController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\FindTutorController;
 use App\Http\Controllers\TutorProfileController;
 use App\Http\Controllers\StudyPackageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TutorVerifyController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PublicTutorController;
+
+// === PUBLIC ROUTES (no auth required) ===
+// Public Tutor List (untuk halaman /tutors)
+Route::get('/tutors/public', [PublicTutorController::class, 'index']);
 
 // === REGISTER & LOGIN BIASA ===
 Route::post('/login', [LoginController::class, 'login']);
+
+// Route::post('/tutor/meeting-link/{studentUserId}', [TutorDashboardController::class, 'sendMeetingLink']);
+    
                     
 // === LOGIN GOOGLE - Complete Registration (API) ===
 Route::post('/auth/google/complete', [GoogleController::class, 'completeGoogleRegistration'])->name('google.complete');
@@ -32,6 +42,9 @@ Route::post('/auth/google/complete', [GoogleController::class, 'completeGoogleRe
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/me', [LoginController::class, 'me']);
+    
+    // Get Classes (untuk dropdown)
+    Route::get('/classes', [ProfileController::class, 'getClasses']);
     
     // Social Auth - Set Role
     Route::post('/auth/social/set-role', [SocialAuthController::class, 'setRole']);
@@ -47,9 +60,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/student/summary', [StudentDashboardController::class, 'summary']);
     Route::get('/dashboard/student/recommended-tutors', [StudentDashboardController::class, 'getRecommendedTutors']);
     
+    // Student - My Schedules & Attendance
+    Route::get('/student/schedules', [StudentDashboardController::class, 'getMySchedules']);
+    Route::post('/student/attendance/{scheduleId}', [StudentDashboardController::class, 'submitAttendance']);
+    Route::post('/student/review/{tutorId}', [StudentDashboardController::class, 'submitReview']);
+    
     // Dashboard Tutor
     Route::get('/dashboard/tutor', [TutorDashboardController::class, 'index']);
     Route::get('/dashboard/tutor/summary', [TutorDashboardController::class, 'summary']);
+    
+    // Tutor - Accept/Reject Learning Requests
+    Route::post('/tutor/requests/{id}/accept', [TutorDashboardController::class, 'acceptRequest']);
+    Route::post('/tutor/requests/{id}/reject', [TutorDashboardController::class, 'rejectRequest']);
+    
+    // Tutor - Get Student Detail
+    Route::get('/tutor/students/{takenScheduleId}', [TutorDashboardController::class, 'getStudentDetail']);
+    
+    // Tutor - Student Attendance/Session Reports
+    Route::get('/tutor/attendance/{studentUserId}', [TutorDashboardController::class, 'getStudentAttendance']);
+    Route::post('/tutor/session-report', [TutorDashboardController::class, 'saveSessionReport']);
+    Route::post('/tutor/meeting-link/{studentUserId}', [TutorDashboardController::class, 'sendMeetingLink']);
     
     // Find Tutor (Geospatial Search)
     Route::get('/find-tutor', [FindTutorController::class, 'search']);
@@ -58,6 +88,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tutor Profile (Lihat profile tutor lengkap)
     Route::get('/tutor-profile/{id}', [TutorProfileController::class, 'show']);
     Route::get('/tutor-profile/{id}/available-slots', [TutorProfileController::class, 'availableSlots']);
+    
+    // === BOOKING ROUTES (Instant Booking dengan Simulasi Payment) ===
+    // Create booking (untuk student)
+    Route::post('/bookings', [BookingController::class, 'store']);
+    
+    // Confirm payment (simulasi - untuk testing)
+    Route::post('/bookings/{id}/confirm', [BookingController::class, 'dummyConfirm']);
+    
+    // Get booking detail
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);
     
     // Study Package (Paket Belajar Student)
     Route::get('/my-packages', [StudyPackageController::class, 'packages']); // List paket yang dibeli
@@ -71,6 +111,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); // Mark specific as read
     Route::delete('/notifications/read-all', [NotificationController::class, 'deleteAllRead']); // Delete all read (harus sebelum {id})
     Route::delete('/notifications/{id}', [NotificationController::class, 'delete']); // Delete specific notification
+    
+    // Bookings (Instant Booking - Student & Tutor)
+    Route::get('/bookings', [BookingController::class, 'index']); // Get all bookings for authenticated user
+    Route::get('/bookings/{id}', [BookingController::class, 'show']); // Get booking detail
+    Route::post('/bookings', [BookingController::class, 'store']); // Create new booking
+    Route::patch('/bookings/{id}/status', [BookingController::class, 'updateStatus']); // Update booking status
     
     // === ROLE-BASED ROUTES ===
     Route::middleware('role:tutor')->group(function () {
@@ -96,7 +142,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // profile
         Route::get('/student/profile', [ProfileController::class, 'showStudentProfile']);
         Route::get('/student/profile/edit', [ProfileController::class, 'showStudentProfile']);
-        Route::patch('/student/profile', [ProfileController::class, 'updateStudentProfile']);
+        Route::post('/student/profile', [ProfileController::class, 'updateStudentProfile']); // Changed to POST for FormData
+        Route::patch('/student/profile', [ProfileController::class, 'updateStudentProfile']); // Keep PATCH for backward compatibility
 
         // order & payment
         Route::get('/package/order', [PaymentController::class, 'showPaymentPackage']);
@@ -117,6 +164,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin-only routes (gunakan middleware role yang sudah ada)
     Route::middleware('role:admin')->group(function () {
+        // Admin Dashboard
+        Route::get('/admin/dashboard/statistics', [AdminDashboardController::class, 'getStatistics']);
+        Route::get('/admin/dashboard/pending-tutors', [AdminDashboardController::class, 'getPendingTutors']);
+        Route::get('/admin/dashboard/pending-payments', [AdminDashboardController::class, 'getPendingPayments']);
+        Route::get('/admin/tutor/{userId}', [AdminDashboardController::class, 'getTutorDetail']);
+        Route::get('/admin/payment/{id}', [AdminDashboardController::class, 'getPaymentDetail']);
+        
+        // Admin Actions
+        Route::patch('/admin/tutor/approve', [AdminDashboardController::class, 'approveTutor']);
+        Route::patch('/admin/tutor/reject', [AdminDashboardController::class, 'rejectTutor']);
+        Route::patch('/admin/payment/verify', [AdminDashboardController::class, 'verifyPayment']);
+        Route::patch('/admin/payment/reject', [AdminDashboardController::class, 'rejectPayment']);
+        
         // Data untuk registrasi tutor (dropdown / form options) - hanya admin
         Route::get('/verify/tutor', [TutorVerifyController::class, 'index']);
         Route::patch('/verify/tutor/approve', [TutorVerifyController::class, 'approve']);

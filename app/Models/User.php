@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GenderEnum;
 use App\Enums\ReligionEnum;
 use App\Enums\RoleEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,6 +44,11 @@ class User extends Authenticatable
     ];
 
     /**
+     * Accessor untuk profile photo URL
+     */
+    protected $appends = [];
+
+    /**
      * Kolom yang harus disembunyikan saat serialisasi.
      *
      * @var array<int, string>
@@ -65,6 +71,7 @@ class User extends Authenticatable
             'home_address' => 'array',
             'date_of_birth' => 'date',
             'role' => RoleEnum::class,
+            'gender' => GenderEnum::class,
             'religion' => ReligionEnum::class,
             'rekening' => 'string'
         ];
