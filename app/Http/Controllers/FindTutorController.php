@@ -331,7 +331,7 @@ class FindTutorController extends Controller
                 cos(radians(longitude) - radians(?)) +
                 sin(radians(?)) * sin(radians(latitude))
             )) AS distance", [$lat, $lng, $lat])
-            ->with(['tutor'])
+            ->with(['tutor', 'schedules'])
             ->where('users.id', $id)
             ->where('users.role', 'tutor')
             ->first();
@@ -347,6 +347,40 @@ class FindTutorController extends Controller
             ? json_decode($tutor->home_address, true) 
             : $tutor->home_address;
 
+        // Group schedules by day
+        $schedulesByDay = [];
+        foreach ($tutor->schedules as $schedule) {
+            $day = $schedule->day;
+            if (!isset($schedulesByDay[$day])) {
+                $schedulesByDay[$day] = [];
+            }
+            $schedulesByDay[$day][] = [
+                'time' => $schedule->time,
+                'is_available' => true,
+                'schedule_id' => $schedule->id
+            ];
+        }
+
+        // Format schedules for frontend
+        $formattedSchedules = [];
+        foreach ($schedulesByDay as $day => $timeSlots) {
+            $dayNames = [
+                1 => 'Monday',
+                2 => 'Tuesday',
+                3 => 'Wednesday',
+                4 => 'Thursday',
+                5 => 'Friday',
+                6 => 'Saturday',
+                7 => 'Sunday'
+            ];
+            
+            $formattedSchedules[] = [
+                'day' => $day,
+                'day_name' => $dayNames[$day] ?? 'Unknown',
+                'time_slots' => $timeSlots
+            ];
+        }
+
         return response()->json([
             'status' => 'success',
             'data' => [
@@ -361,6 +395,9 @@ class FindTutorController extends Controller
                 'distance' => round($tutor->distance, 2),
                 'address' => $address,
                 'tutor_info' => $tutor->tutor,
+                'available_schedules' => [
+                    'schedules' => $formattedSchedules
+                ]
             ]
         ]);
     }

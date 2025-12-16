@@ -81,20 +81,28 @@ class StudentDashboardController extends Controller
             'parent_telephone_number' => $student->parent_telephone_number,
         ];
 
-        // Data Paket yang Dimiliki
+        // Data Paket yang Dimiliki (HANYA YANG APPROVED)
         $packages = StudentPackage::where('student_user_id', $user->id)
+            ->where('status', 'approved') // FILTER: Hanya paket yang sudah di-approve admin
+            ->where(function($query) {
+                $query->whereNull('expired_at')
+                      ->orWhere('expired_at', '>=', now()->toDateString());
+            }) // FILTER: Belum expired
             ->with(['package', 'subject', 'tutor'])
             ->get()
-                ->map(function ($sp) {
+            ->map(function ($sp) {
                 return [
                     'id' => $sp->id,
                     'package_name' => $sp->package?->name ?? null,
                     'package_session' => $sp->package?->session ?? 0,
-                    'remaining_session' => $sp->remaining_session,
-                    'used_session' => ($sp->package?->session ?? 0) - $sp->remaining_session,
+                    'remaining_session' => $sp->remaining_session ?? $sp->package?->session ?? 0,
+                    'used_session' => ($sp->package?->session ?? 0) - ($sp->remaining_session ?? $sp->package?->session ?? 0),
                     'subject_name' => $sp->subject?->name ?? null,
                     'tutor_name' => $sp->tutor?->name ?? null,
                     'tutor_photo' => $sp->tutor?->profile_photo_url ?? null,
+                    'start_date' => $sp->start_date,
+                    'end_date' => $sp->expired_at, // Rename untuk frontend
+                    'status' => $sp->status,
                 ];
             });
 
@@ -611,6 +619,61 @@ class StudentDashboardController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal mengirim review: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get payment history untuk student
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPaymentHistory(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            // Get all payments with order and package info
+            $payments = DB::table('payments')
+                ->join('orders', 'payments.order_id', '=', 'orders.id')
+                ->join('packages', 'orders.package_id', '=', 'packages.id')
+                ->leftJoin('student_packages', function($join) use ($user) {
+                    $join->on('orders.package_id', '=', 'student_packages.package_id')
+                         ->where('student_packages.student_user_id', '=', $user->id);
+                })
+                ->where('orders.user_id', $user->id)
+                ->select(
+                    'payments.id',
+                    'payments.order_id',
+                    'payments.amount',
+                    'payments.payment_method',
+                    'payments.payment_proof',
+                    'payments.status',
+                    'payments.created_at',
+                    'packages.name as package_name',
+                    'student_packages.status as package_status',
+                    'student_packages.start_date',
+                    'student_packages.expired_at'
+                )
+                ->orderBy('payments.created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $payments
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil riwayat pembayaran: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -19,6 +19,10 @@ class StudentPackage extends Model
         'subject_id',
         'tutor_user_id',
         'remaining_session',
+        'status',
+        'start_date',
+        'expired_at',
+        'rejection_reason',
     ];
 
     

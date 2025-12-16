@@ -87,6 +87,52 @@ class StoreTutorRegisterRequest extends FormRequest
                 'required',
                 'string'
             ],
+            
+            // Tutor additional fields (optional)
+            'expertise' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'student_market' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+            'experience' => [
+                'nullable',
+                'string',
+            ],
+            'language_skills' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'organization' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            
+            // File uploads
+            'cv' => [
+                'nullable',
+                'file',
+                'mimes:pdf,doc,docx',
+                'max:2048', // 2MB
+            ],
+            'ktp' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:2048', // 2MB
+            ],
+            'ijazah' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:2048', // 2MB
+            ],
         ];
     }
 }

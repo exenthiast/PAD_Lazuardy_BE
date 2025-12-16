@@ -42,6 +42,8 @@ class Tutor extends Model
         'cv_path',
         'ktp_path',
         'ijazah_path',
+        'bank',
+        'rekening',
         'bank_name',
         'bank_account_number',
         'bank_account_name',

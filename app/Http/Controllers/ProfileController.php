@@ -6,6 +6,7 @@ use App\Enums\DayEnum;
 use App\Http\Requests\UpdateStudentProfileRequest;
 use App\Http\Requests\UpdateTutorLessonMethodRequest;
 use App\Http\Requests\UpdateTutorProfileRequest;
+use App\Models\ScheduleTutor;
 use App\Services\StudentService;
 use App\Services\UserService;
 use Exception;
@@ -365,7 +366,21 @@ class ProfileController extends Controller
 
         // Handle address jika dikirim sebagai string lengkap
         if ($request->has('address') && is_string($request->input('address'))) {
-            $userData['home_address'] = ['address' => $request->input('address')];
+            // Preserve existing home_address data and merge with new address
+            $existingAddress = is_string($user->home_address) 
+                ? json_decode($user->home_address, true) 
+                : ($user->home_address ?: []);
+            
+            $existingAddress['address'] = $request->input('address');
+            $userData['home_address'] = $existingAddress;
+        }
+        
+        // Handle latitude/longitude separately
+        if ($request->has('latitude')) {
+            $userData['latitude'] = $request->input('latitude');
+        }
+        if ($request->has('longitude')) {
+            $userData['longitude'] = $request->input('longitude');
         }
 
         // Handle name edit dengan validasi 7 hari (untuk social auth)
@@ -404,8 +419,29 @@ class ProfileController extends Controller
             }
         }
 
-        // Handle schedule array (untuk social auth)
-        if ($request->has('schedule')) {
+        // Handle schedule array - NEW FORMAT with day and time_slots
+        if ($request->has('schedules')) {
+            $schedulesData = $request->input('schedules');
+            
+            // Delete existing schedules for this tutor
+            $user->schedules()->delete();
+            
+            // Create new schedules
+            foreach ($schedulesData as $daySchedule) {
+                $day = $daySchedule['day'];
+                $timeSlots = $daySchedule['time_slots'] ?? [];
+                
+                foreach ($timeSlots as $slot) {
+                    ScheduleTutor::create([
+                        'user_id' => $user->id,
+                        'day' => $day,
+                        'time' => $slot['time'],
+                    ]);
+                }
+            }
+        }
+        // Handle old schedule format (for backward compatibility)
+        elseif ($request->has('schedule')) {
             $tutorData['learning_method'] = json_encode($request->input('schedule'));
         }
 

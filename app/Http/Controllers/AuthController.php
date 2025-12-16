@@ -278,8 +278,58 @@ class AuthController extends Controller
             $request->only(['province', 'regency', 'district', 'subdistrict', 'street'])
         );
 
+        // Handle file uploads for CV, KTP, Ijazah
+        if ($request->hasFile('cv')) {
+            $file = $request->file('cv');
+            $path = $file->store('tutor/documents', 'public');
+            $tutorData['cv_path'] = $path;
+        }
+        
+        if ($request->hasFile('ktp')) {
+            $file = $request->file('ktp');
+            $path = $file->store('tutor/documents', 'public');
+            $tutorData['ktp_path'] = $path;
+        }
+        
+        if ($request->hasFile('ijazah')) {
+            $file = $request->file('ijazah');
+            $path = $file->store('tutor/documents', 'public');
+            $tutorData['ijazah_path'] = $path;
+        }
+
         // filter data tutor
-        $tutorData = $request->only(['bank', 'rekening',]);
+        $tutorData = array_merge($tutorData ?? [], $request->only([
+            'bank', 
+            'rekening',
+            'expertise',
+            'student_market',
+            'experience',
+            'language_skills',
+            'organization',
+        ]));
+        
+        // Map frontend field names to database column names if different
+        if (isset($tutorData['expertise'])) {
+            $tutorData['keahlian'] = $tutorData['expertise'];
+            unset($tutorData['expertise']);
+        }
+        if (isset($tutorData['student_market'])) {
+            $tutorData['market_siswa'] = $tutorData['student_market'];
+            unset($tutorData['student_market']);
+        }
+        if (isset($tutorData['experience'])) {
+            $tutorData['pengalaman'] = $tutorData['experience'];
+            unset($tutorData['experience']);
+        }
+        if (isset($tutorData['language_skills'])) {
+            $tutorData['skil_bahasa'] = $tutorData['language_skills'];
+            unset($tutorData['language_skills']);
+        }
+        if (isset($tutorData['organization'])) {
+            $tutorData['organisasi'] = $tutorData['organization'];
+            unset($tutorData['organization']);
+        }
+        
         $tutorData['badge'] = BadgeEnum::BRONZE;
 
         DB::beginTransaction();
@@ -287,12 +337,16 @@ class AuthController extends Controller
         {
             $userResult = $authService->registerUser($userData);
             $tutorData['user_id'] = $userResult["user"]->id;
-            Tutor::create($tutorData);
+            $tutor = Tutor::create($tutorData);
+            
+            // Load user with tutor relationship
+            $user = User::with('tutor')->find($userResult["user"]->id);
             
             DB::commit();
             return response()->json([
                 "status" => "success",
                 "token" => $userResult['token'],
+                "user" => $user,
                 "message" => "Registrasi akun berhasil",
             ], 201);
         } catch (Exception $e)

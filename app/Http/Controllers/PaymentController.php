@@ -8,6 +8,7 @@ use App\Enums\PaymentStatusEnum;
 use App\Models\Order;
 use App\Models\Package;
 use App\Models\Payment;
+use App\Models\StudentPackage;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -172,31 +173,61 @@ class PaymentController extends Controller
             'order_id' => ['required', 'exists:orders,id'],
         ]);
 
-        if($request->hasFile('file_upload')){
-            $file = $request->file('file_upload');
-                                                                            
-            // Simpan ke storage
-            $path = $file->store("uploads", 'public');
+        DB::beginTransaction();
+        try {
+            if($request->hasFile('file_upload')){
+                $file = $request->file('file_upload');
+                                                                                
+                // Simpan ke storage
+                $path = $file->store("uploads", 'public');
 
-            $updatePayment = Payment::where('order_id', $request->order_id)
-                    ->where('status', '!=', PaymentStatusEnum::VALIDATED->value)
-                    ->update([
-                        'status' => PaymentStatusEnum::UPLOADED->value,
-                        'proof_image_url' => $path,
-                        'updated_at' => now(),
-                    ]);
+                // Get order with package info
+                $order = Order::with('package')->findOrFail($request->order_id);
+                
+                $updatePayment = Payment::where('order_id', $request->order_id)
+                        ->where('status', '!=', PaymentStatusEnum::VALIDATED->value)
+                        ->update([
+                            'status' => PaymentStatusEnum::UPLOADED->value,
+                            'proof_image_url' => $path,
+                            'updated_at' => now(),
+                        ]);
 
-            if($updatePayment === 0){
+                if($updatePayment === 0){
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Payment tidak ditemukan atau sudah tervalidasi'
+                    ], 404);
+                }
+
+                // Create StudentPackage with pending status if not exists
+                // Only set fields that are required, let nullable fields use DB defaults
+                $studentPackage = StudentPackage::firstOrCreate(
+                    [
+                        'student_user_id' => $order->user_id,
+                        'package_id' => $order->package_id,
+                    ],
+                    [
+                        'status' => 'pending',
+                        'subject_id' => 1, // Default subject, can be updated later
+                        // Don't set tutor_user_id and remaining_session - will be set on approval
+                    ]
+                );
+
+                DB::commit();
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Payment tidak ditemukan atau sudah tervalidasi'
-                ], 404);
+                    'status' => "success",
+                    "message" => 'Bukti pembayaran berhasil terkirim',
+                    'student_package_created' => $studentPackage->wasRecentlyCreated,
+                ], 200);
             }
-
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Upload payment proof error: ' . $e->getMessage());
             return response()->json([
-                'status' => "success",
-                "message" => 'Bukti pembayaran berhasil terkirim',
-            ], 200);
+                'status' => 'error',
+                'message' => 'Gagal upload bukti pembayaran: ' . $e->getMessage()
+            ], 500);
         }
         return response()->json([
             'status' => "failed",

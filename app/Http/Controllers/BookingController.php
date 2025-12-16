@@ -191,26 +191,40 @@ class BookingController extends Controller
                 }
             }
 
-            // Buat taken_schedule (ajuan belajar untuk tutor)
-            $takenSchedule = TakenSchedule::create([
-                'user_id' => $booking->user_id, // Student ID
-                'schedule_tutor_id' => $scheduleTutor->id,
-                'subject_id' => $subjectId,
-                'date' => $date,
-                'status' => TakenScheduleStatusEnum::ACTIVE, // Status aktif karena sudah dibayar
-            ]);
+            // Buat 4 taken_schedule (1 booking = 4 pertemuan di 4 minggu berturut-turut)
+            $takenSchedules = [];
+            
+            for ($week = 0; $week < 4; $week++) {
+                // Hitung tanggal untuk setiap minggu
+                $scheduleDate = (new \DateTime($date))->modify("+{$week} weeks");
+                
+                $takenSchedule = TakenSchedule::create([
+                    'user_id' => $booking->user_id, // Student ID
+                    'schedule_tutor_id' => $scheduleTutor->id,
+                    'subject_id' => $subjectId,
+                    'date' => $scheduleDate->format('Y-m-d'),
+                    'status' => TakenScheduleStatusEnum::ACTIVE, // Status aktif karena sudah dibayar
+                ]);
+                
+                $takenSchedules[] = [
+                    'id' => $takenSchedule->id,
+                    'date' => $takenSchedule->date,
+                    'week' => $week + 1,
+                ];
+            }
 
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Pembayaran berhasil dikonfirmasi dan jadwal telah dibuat',
+                'message' => 'Pembayaran berhasil dikonfirmasi dan 4 jadwal pertemuan telah dibuat',
                 'data' => [
                     'booking_id' => $booking->id,
                     'status' => $booking->status,
                     'schedule_time' => $booking->schedule_time,
                     'price' => $booking->price,
-                    'taken_schedule_id' => $takenSchedule->id,
+                    'taken_schedules' => $takenSchedules,
+                    'total_meetings' => count($takenSchedules),
                 ],
             ], 200);
         } catch (\Exception $e) {

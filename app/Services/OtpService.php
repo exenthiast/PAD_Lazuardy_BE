@@ -166,11 +166,25 @@ class OtpService
 
         DB::beginTransaction();
         try {
-            $otp->code = hash('sha256', $code);
-            $otp->expired_at = Carbon::now()->addMinutes($expiryMinutes);
-            $otp->attempts = 0;
-            $otp->is_used = false;
-            $otp->save();
+            // Jika OTP tidak ditemukan atau sudah expired, buat baru
+            if (!$otp) {
+                $otp = Otp::create([
+                    "identifier" => $identifier,
+                    "identifier_type" => $identifierType,
+                    "code" => hash('sha256', $code),
+                    "verification_type" => $verificationType,
+                    "expired_at" => Carbon::now()->addMinutes($expiryMinutes),
+                    "attempts" => 0,
+                    "is_used" => false,
+                ]);
+            } else {
+                // Update OTP yang ada
+                $otp->code = hash('sha256', $code);
+                $otp->expired_at = Carbon::now()->addMinutes($expiryMinutes);
+                $otp->attempts = 0;
+                $otp->is_used = false;
+                $otp->save();
+            }
 
             DB::commit();
 

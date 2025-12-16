@@ -133,12 +133,55 @@ class LoginController extends Controller
      */
     public function me(Request $request)
     {
-        // Load relasi tutor untuk mendapatkan data lengkap
-        $user = $request->user()->load('tutor');
+        // Load relasi tutor dan schedules untuk mendapatkan data lengkap
+        $user = $request->user()->load(['tutor', 'schedules']);
         
         // Convert role enum to string for frontend
         $userData = $user->toArray();
         $userData['role'] = $user->role?->value ?? 'undefined';
+        
+        // Format schedules jika ada (group by day)
+        if ($user->schedules && $user->schedules->count() > 0) {
+            $schedulesByDay = [];
+            foreach ($user->schedules as $schedule) {
+                $day = $schedule->day;
+                if (!isset($schedulesByDay[$day])) {
+                    $schedulesByDay[$day] = [];
+                }
+                $schedulesByDay[$day][] = [
+                    'time' => $schedule->time,
+                    'is_available' => true,
+                    'schedule_id' => $schedule->id
+                ];
+            }
+
+            // Format schedules untuk frontend
+            $formattedSchedules = [];
+            foreach ($schedulesByDay as $day => $timeSlots) {
+                $dayNames = [
+                    1 => 'Monday',
+                    2 => 'Tuesday',
+                    3 => 'Wednesday',
+                    4 => 'Thursday',
+                    5 => 'Friday',
+                    6 => 'Saturday',
+                    7 => 'Sunday'
+                ];
+                
+                $formattedSchedules[] = [
+                    'day' => $day,
+                    'day_name' => $dayNames[$day] ?? 'Unknown',
+                    'time_slots' => $timeSlots
+                ];
+            }
+
+            // Add to tutor data if tutor exists
+            if (isset($userData['tutor'])) {
+                $userData['tutor']['available_schedules'] = [
+                    'schedules' => $formattedSchedules
+                ];
+            }
+        }
         
         return response()->json([
             'user' => $userData

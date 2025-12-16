@@ -65,6 +65,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/student/attendance/{scheduleId}', [StudentDashboardController::class, 'submitAttendance']);
     Route::post('/student/review/{tutorId}', [StudentDashboardController::class, 'submitReview']);
     
+    // Student - Payment History
+    Route::get('/student/payment-history', [StudentDashboardController::class, 'getPaymentHistory']);
+    
     // Dashboard Tutor
     Route::get('/dashboard/tutor', [TutorDashboardController::class, 'index']);
     Route::get('/dashboard/tutor/summary', [TutorDashboardController::class, 'summary']);
@@ -168,7 +171,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/dashboard/statistics', [AdminDashboardController::class, 'getStatistics']);
         Route::get('/admin/dashboard/pending-tutors', [AdminDashboardController::class, 'getPendingTutors']);
         Route::get('/admin/dashboard/pending-payments', [AdminDashboardController::class, 'getPendingPayments']);
+        Route::get('/admin/dashboard/tutor-management', [AdminDashboardController::class, 'getTutorManagementSummary']);
+        
+        // Admin Tutor Management
+        Route::get('/admin/tutors', [AdminDashboardController::class, 'getAllTutors']);
         Route::get('/admin/tutor/{userId}', [AdminDashboardController::class, 'getTutorDetail']);
+        
+        // Admin Tutor Salary Management
+        Route::get('/admin/tutor/{userId}/salary-history', [AdminDashboardController::class, 'getTutorSalaryHistory']);
+        Route::post('/admin/salary-invoice', [AdminDashboardController::class, 'submitSalaryInvoice']);
+        
+        // Admin Payment Management
         Route::get('/admin/payment/{id}', [AdminDashboardController::class, 'getPaymentDetail']);
         
         // Admin Actions
@@ -176,6 +189,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/admin/tutor/reject', [AdminDashboardController::class, 'rejectTutor']);
         Route::patch('/admin/payment/verify', [AdminDashboardController::class, 'verifyPayment']);
         Route::patch('/admin/payment/reject', [AdminDashboardController::class, 'rejectPayment']);
+        
+        // Subjects
+        Route::get('/subjects', [AdminDashboardController::class, 'getSubjects']);
         
         // Data untuk registrasi tutor (dropdown / form options) - hanya admin
         Route::get('/verify/tutor', [TutorVerifyController::class, 'index']);

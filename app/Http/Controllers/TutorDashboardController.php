@@ -560,6 +560,12 @@ class TutorDashboardController extends Controller
             ? $studentPackage->package->session 
             : $takenSchedules->count();
         
+        // Initialize remaining_session if null (set to total sessions)
+        if ($studentPackage->remaining_session === null) {
+            $studentPackage->remaining_session = $totalSessions;
+            $studentPackage->save();
+        }
+        
         $completedSessions = $totalSessions - $studentPackage->remaining_session;
         $progress = $totalSessions > 0 
             ? round(($completedSessions / $totalSessions) * 100, 2) 
@@ -714,6 +720,11 @@ class TutorDashboardController extends Controller
                     'session_date' => $validated['session_date'],
                     'document_path' => $documentPath,
                 ]);
+                
+                // Update remaining_session (decrement by 1 when new session is completed)
+                if ($studentPackage->remaining_session > 0) {
+                    $studentPackage->decrement('remaining_session');
+                }
             }
 
             DB::commit();
