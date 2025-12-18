@@ -6,6 +6,7 @@ use App\Enums\BadgeEnum;
 use App\Enums\OtpIdentifierEnum;
 use App\Enums\OtpTypeEnum;
 use App\Enums\RoleEnum;
+use App\Enums\TutorStatusEnum;
 use App\Http\Requests\StoreStudentRegisterRequest;
 use App\Http\Requests\StoreTutorRegisterRequest;
 use App\Http\Requests\UpdateAuthRequest;
@@ -331,6 +332,7 @@ class AuthController extends Controller
         }
         
         $tutorData['badge'] = BadgeEnum::BRONZE;
+        $tutorData['status'] = TutorStatusEnum::VERIFY; // Set default status to "verify"
 
         DB::beginTransaction();
         try 

@@ -61,33 +61,103 @@ class BookingController extends Controller
             ], 404);
         }
 
-        // Generate payment token (dummy untuk simulasi)
-        $paymentToken = 'BOOKING-' . time() . '-' . strtoupper(Str::random(6));
-
-        // Buat booking
-        $booking = Booking::create([
-            'user_id' => $user->id,
-            'tutor_id' => $request->tutor_id,
-            'schedule_time' => $request->schedule_time,
-            'price' => $request->price,
-            'status' => 'unpaid',
-            'payment_token' => $paymentToken,
-            'payment_url' => null, // Akan diisi setelah booking dibuat
-        ]);
-
-        // Generate payment URL untuk simulasi (redirect ke Vue frontend)
-        $paymentUrl = 'http://localhost:5173/payment/simulation/' . $booking->id;
+        DB::beginTransaction();
         
-        // Update payment URL
-        $booking->update(['payment_url' => $paymentUrl]);
+        try {
+            // Generate payment token
+            $paymentToken = 'PKG-' . time() . '-' . strtoupper(Str::random(6));
 
-        // Return response dengan payment URL
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Booking created',
-            'booking_id' => $booking->id,
-            'payment_url' => $paymentUrl,
-        ], 201);
+            // Buat booking dengan status 'paid' karena siswa sudah punya paket aktif
+            $booking = Booking::create([
+                'user_id' => $user->id,
+                'tutor_id' => $request->tutor_id,
+                'schedule_time' => $request->schedule_time,
+                'price' => $request->price,
+                'status' => 'paid', // Langsung paid karena dari paket
+                'payment_token' => $paymentToken,
+                'payment_url' => null,
+            ]);
+
+            // Parse schedule_time untuk mendapatkan date dan time
+            $scheduleDateTime = Carbon::parse($request->schedule_time);
+            $date = $scheduleDateTime->format('Y-m-d');
+            $time = $scheduleDateTime->format('H:i:s');
+            
+            // Cari atau buat schedule_tutor untuk tutor ini
+            $scheduleTutor = ScheduleTutor::firstOrCreate([
+                'user_id' => $request->tutor_id,
+                'day' => $scheduleDateTime->dayOfWeekIso, // 1-7 (Monday-Sunday)
+                'time' => $time,
+            ]);
+
+            // Ambil subject_id: prioritas dari StudentPackage siswa yang aktif
+            $subjectId = null;
+            
+            // Cek 1: StudentPackage siswa dengan sisa sesi > 0
+            $studentPackage = DB::table('student_packages')
+                ->where('student_user_id', $user->id)
+                ->where('remaining_session', '>', 0)
+                ->whereNotNull('subject_id')
+                ->first();
+
+            if ($studentPackage && $studentPackage->subject_id) {
+                $subjectId = $studentPackage->subject_id;
+            }
+            
+            // Fallback 1: Ambil subject_id dari tutor_subjects
+            if (!$subjectId) {
+                $tutorSubject = DB::table('tutor_subjects')
+                    ->where('user_id', $request->tutor_id)
+                    ->first();
+                $subjectId = $tutorSubject ? $tutorSubject->subject_id : null;
+            }
+            
+            // Fallback 2: Ambil subject_id pertama dari tabel subjects
+            if (!$subjectId) {
+                $defaultSubject = DB::table('subjects')->first();
+                $subjectId = $defaultSubject ? $defaultSubject->id : null;
+            }
+
+            if (!$subjectId) {
+                throw new \Exception('Tidak dapat menentukan mata pelajaran untuk booking ini. Pastikan tutor memiliki mata pelajaran atau siswa memiliki paket aktif.');
+            }
+
+            // Langsung buat TakenSchedule karena siswa sudah punya paket aktif
+            $takenSchedule = TakenSchedule::create([
+                'user_id' => $user->id, // Student ID
+                'schedule_tutor_id' => $scheduleTutor->id,
+                'subject_id' => $subjectId,
+                'date' => $date,
+                'status' => TakenScheduleStatusEnum::ACTIVE->value, // Status aktif
+            ]);
+
+            DB::commit();
+
+            // Return response tanpa payment URL
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Booking created',
+                'booking_id' => $booking->id,
+                'taken_schedule_id' => $takenSchedule->id,
+                'data' => [
+                    'booking_id' => $booking->id,
+                    'taken_schedule_id' => $takenSchedule->id,
+                    'date' => $takenSchedule->date,
+                    'time' => $time,
+                    'status' => $takenSchedule->status,
+                    'tutor_id' => $request->tutor_id,
+                    'subject_id' => $subjectId,
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create booking: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

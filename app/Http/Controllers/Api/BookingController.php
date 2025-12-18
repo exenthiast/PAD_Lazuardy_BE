@@ -45,32 +45,81 @@ class BookingController extends Controller
                 ], 401);
             }
 
+            \DB::beginTransaction();
+
             // Create booking
             $booking = Booking::create([
                 'user_id' => $userId,
                 'tutor_id' => $request->tutor_id,
                 'schedule_time' => $request->schedule_time,
                 'price' => $request->price,
-                'status' => 'unpaid',
+                'status' => 'paid', // Status langsung paid karena siswa sudah punya paket aktif
+                'payment_token' => 'PKG-' . strtoupper(uniqid()), // Token dari paket
             ]);
 
-            // Generate payment URL (simulasi)
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-            $paymentUrl = $frontendUrl . '/payment/simulation/' . $booking->id;
+            // Parse schedule_time untuk mendapatkan date dan time
+            $scheduleDateTime = \Carbon\Carbon::parse($request->schedule_time);
+            $date = $scheduleDateTime->format('Y-m-d');
+            $time = $scheduleDateTime->format('H:i:s');
             
-            // Update booking dengan payment URL
-            $booking->update([
-                'payment_url' => $paymentUrl,
+            // Cari atau buat schedule_tutor untuk tutor ini
+            $scheduleTutor = \App\Models\ScheduleTutor::firstOrCreate([
+                'user_id' => $request->tutor_id,
+                'day' => $scheduleDateTime->dayOfWeekIso, // 1-7 (Monday-Sunday)
+                'time' => $time,
             ]);
+
+            // Ambil subject_id dari StudentPackage atau user subjects
+            $studentPackage = \App\Models\StudentPackage::where('student_user_id', $userId)
+                ->where('tutor_user_id', $request->tutor_id)
+                ->where('remaining_session', '>', 0)
+                ->first();
+
+            $subjectId = null;
+            if ($studentPackage) {
+                $subjectId = $studentPackage->subject_id;
+            } else {
+                // Fallback: ambil subject pertama dari tutor
+                $tutorSubject = \DB::table('user_subjects')
+                    ->where('user_id', $request->tutor_id)
+                    ->first();
+                $subjectId = $tutorSubject ? $tutorSubject->subject_id : null;
+            }
+
+            if (!$subjectId) {
+                throw new \Exception('Tidak dapat menentukan mata pelajaran untuk booking ini');
+            }
+
+            // Langsung buat TakenSchedule karena siswa sudah punya paket aktif
+            $takenSchedule = \App\Models\TakenSchedule::create([
+                'user_id' => $userId, // Student ID
+                'schedule_tutor_id' => $scheduleTutor->id,
+                'subject_id' => $subjectId,
+                'date' => $date,
+                'status' => 'active', // Status aktif karena sudah dibayar via paket
+            ]);
+
+            \DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Booking created successfully',
+                'message' => 'Booking created',
                 'booking_id' => $booking->id,
-                'payment_url' => $paymentUrl,
+                'taken_schedule_id' => $takenSchedule->id,
+                'data' => [
+                    'booking_id' => $booking->id,
+                    'taken_schedule_id' => $takenSchedule->id,
+                    'date' => $takenSchedule->date,
+                    'time' => $time,
+                    'status' => $takenSchedule->status,
+                    'tutor_id' => $request->tutor_id,
+                    'subject_id' => $subjectId,
+                ],
             ], 201);
 
         } catch (\Exception $e) {
+            \DB::rollBack();
+            
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to create booking',

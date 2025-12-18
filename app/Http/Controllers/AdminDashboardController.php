@@ -34,8 +34,8 @@ class AdminDashboardController extends Controller
             // Total Students
             $totalStudents = User::where('role', RoleEnum::STUDENT)->count();
             
-            // Total Tutors
-            $totalTutors = User::where('role', RoleEnum::TUTOR)->count();
+            // Total Tutors (only active tutors)
+            $totalTutors = Tutor::where('status', TutorStatusEnum::ACTIVE)->count();
             
             // Monthly Transactions (current month)
             $monthlyTransactions = Payment::whereMonth('created_at', now()->month)
@@ -78,7 +78,7 @@ class AdminDashboardController extends Controller
                         'id' => $tutor->user_id,
                         'name' => $tutor->user->name ?? 'N/A',
                         'subject' => $tutor->keahlian ?? 'N/A',
-                        'status' => $tutor->status === TutorStatusEnum::VERIFY ? 'Menunggu' : ($tutor->status ? $tutor->status->displayName() : 'N/A'),
+                        'status' => $tutor->status ? $tutor->status->displayName() : 'Menunggu',
                         'created_at' => $tutor->created_at,
                     ];
                 });

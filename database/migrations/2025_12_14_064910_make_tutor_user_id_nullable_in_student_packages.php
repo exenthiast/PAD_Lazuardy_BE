@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('student_packages', function (Blueprint $table) {
-            //
+            // Drop foreign key first
+            $table->dropForeign(['tutor_user_id']);
+            
+            // Modify column to be nullable
+            $table->foreignId('tutor_user_id')->nullable()->change()->constrained('users', 'id')->onDelete('cascade');
         });
     }
 
@@ -22,7 +26,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('student_packages', function (Blueprint $table) {
-            //
+            // Drop foreign key
+            $table->dropForeign(['tutor_user_id']);
+            
+            // Make it not nullable again
+            $table->foreignId('tutor_user_id')->change()->constrained('users', 'id')->onDelete('cascade');
         });
     }
 };
